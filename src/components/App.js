@@ -1,4 +1,6 @@
 import React, { Component } from 'react';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import ImageGallery from './ImageGallery';
 import Modal from './Modal';
@@ -17,11 +19,10 @@ class App extends Component {
   };
 
   componentDidUpdate(prevProps, prevState) {
-    const prevName = prevProps.keyword;
-    const nextName = this.props.keyword;
+    const prevName = prevState.keyword;
+    const nextName = this.state.keyword;
 
     if (prevName !== nextName) {
-      console.log('изменилось имя');
       this.setState({ status: 'pending' });
       this.fetchImages();
     }
@@ -29,17 +30,17 @@ class App extends Component {
 
   fetchImages = () => {
     const { keyword, page } = this.state;
+
     fetchImagesAPI(keyword, page)
-      .then(images => {
-        if (images.total === 0) {
+      .then(answer => {
+        if (answer.total === 0) {
           this.setState({
-            error: 'Нет картинок по запросу',
-            status: 'resolved',
+            error: `Картинки по запросу ${keyword} не найдены`,
+            status: 'rejected',
           });
         } else {
-          console.log(images);
           this.setState(({ images, page, keyword }) => ({
-            images: [...images, ...images.hits],
+            images: [...images, ...answer.hits],
             status: 'resolved',
             page: page + 1,
             keyword,
@@ -59,15 +60,56 @@ class App extends Component {
   };
 
   handlerLoadMoreBtn() {
-    this.setState({ status: 'pending' });
+    this.setState({
+      status: 'pending',
+    });
     this.fetchImages();
   }
 
+  handlerOpenModal = URLImageLarge => {
+    this.setState({
+      largeImageURL: URLImageLarge,
+    });
+  };
+
+  handlerCloseModal = () => {
+    this.setState({
+      largeImageURL: '',
+    });
+  };
+
   render() {
+    const { status, images, error, largeImageURL } = this.state;
+    const {
+      formSubmitHandler,
+      handlerOpenModal,
+      handlerLoadMoreBtn,
+      handlerCloseModal,
+    } = this;
+
     return (
       <>
-        <Searchbar onSubmit={this.formSubmitHandler} />
-        <ImageGallery images={this.state.images} />
+        <Searchbar onSubmit={formSubmitHandler} />;
+        {status === 'resolved' && (
+          <>
+            <ImageGallery
+              images={images}
+              onOpenModal={handlerOpenModal.bind(this)}
+            />
+            {images.length > 0 && (
+              <Button onClick={handlerLoadMoreBtn.bind(this)} />
+            )}
+          </>
+        )}
+        {status === 'pending' && <Loader />}
+        {largeImageURL && (
+          <Modal
+            largeImageURL={largeImageURL}
+            onCloseModal={handlerCloseModal}
+          />
+        )}
+        {status === 'rejected' && <p>{error}</p>}
+        <ToastContainer autoClose={3000} position="top-center" />
       </>
     );
   }

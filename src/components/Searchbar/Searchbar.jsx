@@ -1,8 +1,14 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { toast } from 'react-toastify';
+
 import c from './Searchbar.module.css';
 
 class Searchbar extends Component {
+  static propTypes = {
+    onSubmit: PropTypes.func.isRequired,
+  };
+
   state = {
     keyword: '',
   };
@@ -17,18 +23,19 @@ class Searchbar extends Component {
     const { props, state } = this;
 
     e.preventDefault();
-    console.log('object');
-    console.log(state.keyword.trim());
-    console.log(toast());
+
+    if (state.keyword.trim() === '') {
+      return toast('Введите запрос');
+    }
 
     props.onSubmit(state);
-    if (state.keyword.trim() === '') {
-      return toast.error('Введите запрос');
-    }
+
+    this.setState({ keyword: '' });
   };
 
   render() {
     const { handleSubmit, inputHandler } = this;
+    const { keyword } = this.state;
     return (
       <>
         <header className={c.Searchbar}>
@@ -44,6 +51,7 @@ class Searchbar extends Component {
               autoFocus
               placeholder="Search images and photos"
               onChange={inputHandler}
+              value={keyword}
             />
           </form>
         </header>
