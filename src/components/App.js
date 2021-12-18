@@ -22,8 +22,14 @@ class App extends Component {
     const prevName = prevState.keyword;
     const nextName = this.state.keyword;
 
+    const prevPage = prevState.page;
+    const nextPage = this.state.page;
+
     if (prevName !== nextName) {
-      this.setState({ status: 'pending' });
+      this.setState({ images: [], status: 'pending' });
+    }
+
+    if (prevName !== nextName || prevPage !== nextPage) {
       this.fetchImages();
     }
   }
@@ -32,17 +38,22 @@ class App extends Component {
     const { keyword, page } = this.state;
 
     fetchImagesAPI(keyword, page)
-      .then(answer => {
-        if (answer.total === 0) {
+      .then(({ hits, total }) => {
+        if (total === 0) {
           this.setState({
             error: `Картинки по запросу ${keyword} не найдены`,
             status: 'rejected',
           });
         } else {
-          this.setState(({ images, page, keyword }) => ({
-            images: [...images, ...answer.hits],
+          const result = hits.map(
+            ({ id, webformatURL, largeImageURL, tags }) => {
+              return { id, webformatURL, largeImageURL, tags };
+            },
+          );
+
+          this.setState(({ images, keyword }) => ({
+            images: [...images, ...result],
             status: 'resolved',
-            page: page + 1,
             keyword,
           }));
         }
@@ -59,12 +70,12 @@ class App extends Component {
     });
   };
 
-  handlerLoadMoreBtn() {
-    this.setState({
+  handlerLoadMoreBtn = () => {
+    this.setState(({ page }) => ({
       status: 'pending',
-    });
-    this.fetchImages();
-  }
+      page: page + 1,
+    }));
+  };
 
   handlerOpenModal = URLImageLarge => {
     this.setState({
@@ -92,13 +103,8 @@ class App extends Component {
         <Searchbar onSubmit={formSubmitHandler} />;
         {status === 'resolved' && (
           <>
-            <ImageGallery
-              images={images}
-              onOpenModal={handlerOpenModal.bind(this)}
-            />
-            {images.length > 0 && (
-              <Button onClick={handlerLoadMoreBtn.bind(this)} />
-            )}
+            <ImageGallery images={images} onOpenModal={handlerOpenModal} />
+            {images.length > 0 && <Button onClick={handlerLoadMoreBtn} />}
           </>
         )}
         {status === 'pending' && <Loader />}
