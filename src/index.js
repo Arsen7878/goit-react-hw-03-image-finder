@@ -4,4 +4,9 @@ import App from './components/App';
 import 'react-loader-spinner/dist/loader/css/react-spinner-loader.css';
 import './styles/main.css';
 
-ReactDOM.render(<App />, document.getElementById('root'));
+ReactDOM.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+  document.getElementById('root'),
+);

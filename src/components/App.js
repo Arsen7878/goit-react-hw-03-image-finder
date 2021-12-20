@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import ImageGallery from './ImageGallery';
@@ -30,32 +29,28 @@ class App extends Component {
     }
 
     if (prevName !== nextName || prevPage !== nextPage) {
-      this.fetchImages();
+      this.fetchImages(nextName, nextPage);
     }
   }
 
-  fetchImages = () => {
-    const { keyword, page } = this.state;
-
+  fetchImages = (keyword, page) => {
     fetchImagesAPI(keyword, page)
-      .then(({ hits, total }) => {
-        if (total === 0) {
+      .then(({ hits }) => {
+        const result = hits.map(({ id, webformatURL, largeImageURL, tags }) => {
+          return { id, webformatURL, largeImageURL, tags };
+        });
+        if (result.length === 0) {
           this.setState({
             error: `Картинки по запросу ${keyword} не найдены`,
             status: 'rejected',
           });
         } else {
-          const result = hits.map(
-            ({ id, webformatURL, largeImageURL, tags }) => {
-              return { id, webformatURL, largeImageURL, tags };
-            },
-          );
-
-          this.setState(({ images, keyword }) => ({
-            images: [...images, ...result],
-            status: 'resolved',
-            keyword,
-          }));
+          this.setState(({ images }) => {
+            return {
+              images: [...images, ...result],
+              status: 'resolved',
+            };
+          });
         }
       })
       .catch(error => this.setState({ error, status: 'rejected' }));
@@ -90,7 +85,8 @@ class App extends Component {
   };
 
   render() {
-    const { status, images, error, largeImageURL } = this.state;
+    const { images, status, error, largeImageURL } = this.state;
+
     const {
       formSubmitHandler,
       handlerOpenModal,
@@ -98,26 +94,47 @@ class App extends Component {
       handlerCloseModal,
     } = this;
 
-    return (
-      <>
-        <Searchbar onSubmit={formSubmitHandler} />;
-        {status === 'resolved' && (
-          <>
+    if (status === 'idle') {
+      return <Searchbar onSubmit={formSubmitHandler} />;
+    }
+
+    if (status === 'pending') {
+      return (
+        <div>
+          <Searchbar onSubmit={formSubmitHandler} />
+          {images.length > 0 && (
             <ImageGallery images={images} onOpenModal={handlerOpenModal} />
-            {images.length > 0 && <Button onClick={handlerLoadMoreBtn} />}
-          </>
-        )}
-        {status === 'pending' && <Loader />}
-        {largeImageURL && (
-          <Modal
-            largeImageURL={largeImageURL}
-            onCloseModal={handlerCloseModal}
-          />
-        )}
-        {status === 'rejected' && <p>{error}</p>}
-        <ToastContainer autoClose={3000} position="top-center" />
-      </>
-    );
+          )}
+          <Loader />
+        </div>
+      );
+    }
+
+    if (status === 'rejected') {
+      return (
+        <>
+          <p>{error}</p>
+        </>
+      );
+    }
+
+    if (status === 'resolved') {
+      return (
+        <>
+          <Searchbar onSubmit={formSubmitHandler} />
+          <ImageGallery onOpenModal={handlerOpenModal} images={images} />
+          <Button onClick={handlerLoadMoreBtn} />
+
+          {largeImageURL && (
+            <Modal
+              largeImageURL={largeImageURL}
+              alt=""
+              onCloseModal={handlerCloseModal}
+            />
+          )}
+        </>
+      );
+    }
   }
 }
 
